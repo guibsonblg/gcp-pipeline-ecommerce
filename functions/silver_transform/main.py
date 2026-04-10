@@ -66,20 +66,21 @@ def transform_customers():
         )
         SELECT
             id_cliente,
-            nome,
-            LOWER(email) as email,
-            telefone,
-            endereco,
-            cidade,
-            estado,
-            pais,
+            TRIM(nome) AS nome,
+            LOWER(TRIM(email)) AS email,
+            TRIM(telefone) AS telefone,
+            TRIM(endereco) AS endereco,
+            TRIM(cidade) AS cidade,
+            UPPER(TRIM(estado)) AS estado,
+            TRIM(pais) AS pais,
             data_cadastro,
-            segmento_cliente,
+            TRIM(segmento_cliente) AS segmento_cliente,
             CURRENT_TIMESTAMP() AS atualizado_em
         FROM `{project_id}.{bronze_dataset}.clientes`
         WHERE id_cliente IS NOT NULL
           AND nome IS NOT NULL
           AND email IS NOT NULL
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY id_cliente ORDER BY carregado_em DESC) = 1
     """
     insert_job = bq_client.query(insert_query)
     insert_job.result()
@@ -107,13 +108,13 @@ def transform_products():
         )
         SELECT
             id_produto,
-            nome,
-            categoria,
-            subcategoria,
+            TRIM(nome) AS nome,
+            TRIM(categoria) AS categoria,
+            TRIM(subcategoria) AS subcategoria,
             preco,
             custo,
             quantidade_estoque,
-            fornecedor,
+            TRIM(fornecedor) AS fornecedor,
             criado_em,
             CASE
                 WHEN preco > 0 AND custo IS NOT NULL THEN ROUND((preco - custo) / preco, 4)
@@ -125,6 +126,8 @@ def transform_products():
           AND nome IS NOT NULL
           AND categoria IS NOT NULL
           AND preco > 0
+          AND quantidade_estoque >= 0
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY id_produto ORDER BY carregado_em DESC) = 1
     """
     insert_job = bq_client.query(insert_query)
     insert_job.result()
@@ -157,8 +160,8 @@ def transform_transactions():
             preco_unitario,
             valor_total,
             data_transacao,
-            status,
-            metodo_pagamento,
+            TRIM(status) AS status,
+            TRIM(metodo_pagamento) AS metodo_pagamento,
             CURRENT_TIMESTAMP() AS atualizado_em
         FROM `{project_id}.{bronze_dataset}.transacoes`
         WHERE id_transacao IS NOT NULL
@@ -167,6 +170,9 @@ def transform_transactions():
           AND quantidade > 0
           AND preco_unitario > 0
           AND valor_total > 0
+          AND TRIM(status) IN ('completed', 'pending', 'cancelled')
+          AND ABS(ROUND(quantidade * preco_unitario, 2) - ROUND(valor_total, 2)) <= 0.01
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY id_transacao ORDER BY carregado_em DESC) = 1
     """
     insert_job = bq_client.query(insert_query)
     insert_job.result()
