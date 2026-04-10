@@ -73,6 +73,7 @@ jobs:
       - name: Deploy função bronze_ingest
         run: |
           gcloud functions deploy bronze_ingest \
+            --no-gen2 \
             --region=${{ secrets.GCP_REGION }} \
             --runtime=python311 \
             --trigger-resource=${{ secrets.GCP_PROJECT_ID }}-pipeline-raw \
@@ -85,6 +86,7 @@ jobs:
       - name: Deploy função silver_transform
         run: |
           gcloud functions deploy silver_transform \
+            --no-gen2 \
             --region=${{ secrets.GCP_REGION }} \
             --runtime=python311 \
             --trigger-topic=${{ secrets.GCP_PROJECT_ID }}-bronze-to-silver \
@@ -96,6 +98,7 @@ jobs:
       - name: Deploy função analytics_views
         run: |
           gcloud functions deploy analytics_views \
+            --no-gen2 \
             --region=${{ secrets.GCP_REGION }} \
             --runtime=python311 \
             --trigger-topic=${{ secrets.GCP_PROJECT_ID }}-silver-to-analytics \
