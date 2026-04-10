@@ -34,7 +34,7 @@ jobs:
 
       - name: Inicializar Terraform
         working-directory: terraform
-        run: terraform init
+        run: terraform init -backend-config="bucket=${{ secrets.GCP_PROJECT_ID }}-pipeline-raw"
 
       - name: Formatação Terraform
         working-directory: terraform

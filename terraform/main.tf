@@ -27,24 +27,30 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
+# Aguardar propagação das APIs antes de criar recursos
+resource "time_sleep" "wait_for_apis" {
+  depends_on      = [google_project_service.services]
+  create_duration = "60s"
+}
+
 # Bucket para ingestão manual de dados
 resource "google_storage_bucket" "raw" {
   name                        = local.raw_bucket_name
   location                    = var.location
-  force_destroy               = true
+  force_destroy               = false
   uniform_bucket_level_access = true
-  depends_on                  = [google_project_service.services]
+  depends_on                  = [time_sleep.wait_for_apis]
 }
 
 # Tópicos Pub/Sub para orquestração da pipeline
 resource "google_pubsub_topic" "bronze_to_silver" {
   name       = local.bronze_topic_name
-  depends_on = [google_project_service.services]
+  depends_on = [time_sleep.wait_for_apis]
 }
 
 resource "google_pubsub_topic" "silver_to_analytics" {
   name       = local.analytics_topic_name
-  depends_on = [google_project_service.services]
+  depends_on = [time_sleep.wait_for_apis]
 }
 
 # Datasets BigQuery para as camadas da arquitetura Medallion
@@ -52,21 +58,21 @@ resource "google_bigquery_dataset" "bronze" {
   dataset_id  = "bronze"
   location    = var.location
   description = "Camada Bronze - dados de ingestão bruta"
-  depends_on  = [google_project_service.services]
+  depends_on  = [time_sleep.wait_for_apis]
 }
 
 resource "google_bigquery_dataset" "silver" {
   dataset_id  = "silver"
   location    = var.location
   description = "Camada Silver - dados transformados e limpos"
-  depends_on  = [google_project_service.services]
+  depends_on  = [time_sleep.wait_for_apis]
 }
 
 resource "google_bigquery_dataset" "analytics" {
   dataset_id  = "analytics"
   location    = var.location
   description = "Camada Analytics - views para análise de dados"
-  depends_on  = [google_project_service.services]
+  depends_on  = [time_sleep.wait_for_apis]
 }
 
 # Tabelas da camada Bronze
@@ -117,7 +123,7 @@ resource "google_bigquery_table" "silver_transactions" {
 resource "google_service_account" "functions" {
   account_id   = local.function_sa_id
   display_name = "Service Account para Pipeline Functions"
-  depends_on   = [google_project_service.services]
+  depends_on   = [time_sleep.wait_for_apis]
 }
 
 # Permissões da Service Account
