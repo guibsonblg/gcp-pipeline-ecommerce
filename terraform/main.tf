@@ -15,6 +15,7 @@ locals {
     "storage.googleapis.com",
     "bigquery.googleapis.com",
     "pubsub.googleapis.com",
+    "run.googleapis.com",
   ])
 }
 
