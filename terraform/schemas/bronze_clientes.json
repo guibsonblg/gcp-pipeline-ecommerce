@@ -8,5 +8,6 @@
   {"name":"estado","type":"STRING","mode":"NULLABLE"},
   {"name":"pais","type":"STRING","mode":"NULLABLE"},
   {"name":"data_cadastro","type":"DATE","mode":"REQUIRED"},
+  {"name":"segmento_cliente","type":"STRING","mode":"NULLABLE"},
   {"name":"carregado_em","type":"TIMESTAMP","mode":"REQUIRED"}
 ]
