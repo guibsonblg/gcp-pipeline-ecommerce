@@ -14,12 +14,13 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+      - name: Autenticar com Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          version: 'from_channel'
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
 
       - name: Configurar projeto e região gcloud
         run: |
@@ -51,12 +52,13 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+      - name: Autenticar com Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          version: 'from_channel'
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
 
       - name: Configurar projeto e região gcloud
         run: |
