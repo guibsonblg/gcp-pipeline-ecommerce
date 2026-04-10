@@ -1,0 +1,12 @@
+[
+  {"name":"id_produto","type":"STRING","mode":"REQUIRED"},
+  {"name":"nome","type":"STRING","mode":"REQUIRED"},
+  {"name":"categoria","type":"STRING","mode":"REQUIRED"},
+  {"name":"subcategoria","type":"STRING","mode":"NULLABLE"},
+  {"name":"preco","type":"FLOAT","mode":"REQUIRED"},
+  {"name":"custo","type":"FLOAT","mode":"NULLABLE"},
+  {"name":"quantidade_estoque","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"fornecedor","type":"STRING","mode":"NULLABLE"},
+  {"name":"criado_em","type":"TIMESTAMP","mode":"REQUIRED"},
+  {"name":"carregado_em","type":"TIMESTAMP","mode":"REQUIRED"}
+]

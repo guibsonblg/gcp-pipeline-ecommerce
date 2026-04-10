@@ -1,0 +1,103 @@
+name: Pipeline Medallion GCP
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  terraform:
+    name: Provisionamento Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: 'from_channel'
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar projeto e região gcloud
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud config set compute/region ${{ secrets.GCP_REGION }}
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Inicializar Terraform
+        working-directory: terraform
+        run: terraform init
+
+      - name: Formatação Terraform
+        working-directory: terraform
+        run: terraform fmt -check
+
+      - name: Aplicar Terraform
+        working-directory: terraform
+        run: terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=${{ secrets.GCP_REGION }}" -var="location=${{ secrets.GCP_LOCATION }}"
+
+  deploy_functions:
+    name: Deploy Cloud Functions
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: 'from_channel'
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar projeto e região gcloud
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud config set compute/region ${{ secrets.GCP_REGION }}
+
+      - name: Resolver service account das funções
+        run: |
+          FUNCTION_SA_EMAIL=$(gcloud iam service-accounts list --filter="pipeline-functions-sa" --format="value(email)")
+          echo "FUNCTION_SA_EMAIL=${FUNCTION_SA_EMAIL}" >> $GITHUB_ENV
+
+      - name: Deploy função bronze_ingest
+        run: |
+          gcloud functions deploy bronze_ingest \
+            --region=${{ secrets.GCP_REGION }} \
+            --runtime=python311 \
+            --trigger-resource=${{ secrets.GCP_PROJECT_ID }}-pipeline-raw \
+            --trigger-event=google.storage.object.finalize \
+            --entry-point=ingest_to_bronze \
+            --source=functions/bronze_ingest \
+            --service-account=${{ env.FUNCTION_SA_EMAIL }} \
+            --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},BRONZE_DATASET=bronze,PUBSUB_TOPIC=${{ secrets.GCP_PROJECT_ID }}-bronze-to-silver
+
+      - name: Deploy função silver_transform
+        run: |
+          gcloud functions deploy silver_transform \
+            --region=${{ secrets.GCP_REGION }} \
+            --runtime=python311 \
+            --trigger-topic=${{ secrets.GCP_PROJECT_ID }}-bronze-to-silver \
+            --entry-point=transform_to_silver \
+            --source=functions/silver_transform \
+            --service-account=${{ env.FUNCTION_SA_EMAIL }} \
+            --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},BRONZE_DATASET=bronze,SILVER_DATASET=silver,PUBSUB_TOPIC=${{ secrets.GCP_PROJECT_ID }}-silver-to-analytics
+
+      - name: Deploy função analytics_views
+        run: |
+          gcloud functions deploy analytics_views \
+            --region=${{ secrets.GCP_REGION }} \
+            --runtime=python311 \
+            --trigger-topic=${{ secrets.GCP_PROJECT_ID }}-silver-to-analytics \
+            --entry-point=create_analytics_views \
+            --source=functions/analytics_views \
+            --service-account=${{ env.FUNCTION_SA_EMAIL }} \
+            --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},SILVER_DATASET=silver,ANALYTICS_DATASET=analytics

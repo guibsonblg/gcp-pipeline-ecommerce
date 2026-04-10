@@ -1,0 +1,89 @@
+{
+  "clientes": [
+    {
+      "id_cliente": "CUST-0001",
+      "nome": "João Silva",
+      "email": "joao.silva@email.com",
+      "telefone": "+55 11 99999-9999",
+      "endereco": "Rua das Flores, 123",
+      "cidade": "São Paulo",
+      "estado": "SP",
+      "pais": "Brasil",
+      "data_cadastro": "2024-01-15",
+      "segmento_cliente": "Ouro"
+    },
+    {
+      "id_cliente": "CUST-0002",
+      "nome": "Maria Santos",
+      "email": "maria.santos@email.com",
+      "telefone": "+55 21 88888-8888",
+      "endereco": "Av. Copacabana, 456",
+      "cidade": "Rio de Janeiro",
+      "estado": "RJ",
+      "pais": "Brasil",
+      "data_cadastro": "2024-02-20",
+      "segmento_cliente": "Prata"
+    }
+  ],
+  "produtos": [
+    {
+      "id_produto": "PROD-0001",
+      "nome": "Smartphone XYZ",
+      "categoria": "Eletrônicos",
+      "subcategoria": "Smartphones",
+      "preco": 1999.99,
+      "custo": 1200.00,
+      "quantidade_estoque": 50,
+      "fornecedor": "Amazon",
+      "criado_em": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id_produto": "PROD-0002",
+      "nome": "Camiseta Básica",
+      "categoria": "Roupas",
+      "subcategoria": "Camisetas",
+      "preco": 29.90,
+      "custo": 15.00,
+      "quantidade_estoque": 200,
+      "fornecedor": "Magazine Luiza",
+      "criado_em": "2024-01-05T14:30:00Z"
+    }
+  ],
+  "transacoes": [
+    {
+      "id_transacao": "TXN-000001",
+      "id_cliente": "CUST-0001",
+      "id_produto": "PROD-0001",
+      "quantidade": 1,
+      "preco_unitario": 1999.99,
+      "valor_total": 1999.99,
+      "data_transacao": "2024-04-01T15:30:00Z",
+      "status": "completed",
+      "metodo_pagamento": "credit_card"
+    },
+    {
+      "id_transacao": "TXN-000002",
+      "id_cliente": "CUST-0002",
+      "id_produto": "PROD-0002",
+      "quantidade": 2,
+      "preco_unitario": 29.90,
+      "valor_total": 59.80,
+      "data_transacao": "2024-04-02T09:15:00Z",
+      "status": "completed",
+      "metodo_pagamento": "pix"
+    },
+    {
+      "id_transacao": "TXN-000003",
+      "id_cliente": "CUST-0001",
+      "id_produto": "PROD-0002",
+      "quantidade": 1,
+      "preco_unitario": 29.90,
+      "valor_total": 29.90,
+      "data_transacao": "2024-04-03T11:45:00Z",
+      "status": "pending",
+      "metodo_pagamento": "boleto"
+    }
+  ],
+  "generated_at": "2024-04-08T12:00:00Z",
+  "version": "1.0"
+}
