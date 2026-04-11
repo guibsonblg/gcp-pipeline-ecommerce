@@ -52,6 +52,7 @@ def ingest_to_bronze(event, context):
             "estado": customer.get("estado"),
             "pais": customer.get("pais"),
             "data_cadastro": customer["data_cadastro"],
+            "segmento_cliente": customer.get("segmento_cliente"),
             "carregado_em": loaded_at,
         })
 

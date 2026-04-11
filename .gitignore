@@ -1,7 +1,9 @@
 # Terraform
 .terraform/
+**/.terraform/
 *.tfstate
 *.tfstate.backup
+*.tfstate.*.backup
 .terraform.lock.hcl
 *.tfplan
 *.tfvars
@@ -30,6 +32,10 @@ gcp-key.json
 
 # Dados gerados localmente
 ecommerce-data-*.json
+
+# Dados de teste (não versionar dados reais)
+sample_data/*.json
+!sample_data/ecommerce-sample.json
 
 # IDEs
 .idea/
