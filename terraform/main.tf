@@ -3,6 +3,11 @@ provider "google" {
   region  = var.region
 }
 
+# Dados do projeto para obter o número do projeto (necessário para compute SA)
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 locals {
   raw_bucket_name      = "${var.project_id}-pipeline-raw"
   bronze_topic_name    = "${var.project_id}-bronze-to-silver"
@@ -156,4 +161,18 @@ resource "google_project_iam_member" "functions_pubsub_subscriber" {
   project = var.project_id
   role    = "roles/pubsub.subscriber"
   member  = "serviceAccount:${google_service_account.functions.email}"
+}
+
+# Permissões para a SA de CI/CD fazer deploy das Cloud Functions
+# (a SA usada no GitHub Actions precisa de iam.serviceAccountUser nas SAs das funções)
+resource "google_service_account_iam_member" "cicd_can_use_functions_sa" {
+  service_account_id = google_service_account.functions.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:terraform-ci-cd@${var.project_id}.iam.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "cicd_can_use_compute_sa" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:terraform-ci-cd@${var.project_id}.iam.gserviceaccount.com"
 }

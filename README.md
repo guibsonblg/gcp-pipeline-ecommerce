@@ -1,95 +1,119 @@
-# Pipeline GCP
+# Pipeline Medallion GCP
 
-Uma pipeline simples em GCP com arquitetura Medallion (Bronze, Silver, Gold/Analytics) para dados de e-commerce:
-
-- Ingestão manual via upload de arquivo JSON no bucket GCS
-- Cloud Functions para processar o arquivo e avançar o pipeline
-- BigQuery para Bronze e Silver
-- Views no dataset Analytics (Gold)
-- Terraform para provisionar infraestrutura
-- GitHub Actions para executar Terraform e deploy das funções
+Pipeline de dados orientada a eventos no Google Cloud Platform com arquitetura **Medallion (Bronze → Silver → Analytics)** para dados de e-commerce. Infraestrutura provisionada via Terraform e deploy automatizado via GitHub Actions.
 
 ## Arquitetura
 
-- `raw` bucket: ingestão manual de arquivos JSON com dados de e-commerce
-- Bronze: dataset BigQuery com tabelas de ingestão (clientes, produtos, transacoes)
-- Silver: dataset BigQuery com tabelas transformadas e limpas
-- Analytics: dataset BigQuery com views analíticas derivadas
-- Cloud Functions:
-  - `bronze_ingest`: processa o arquivo JSON e separa dados para Bronze
-  - `silver_transform`: transforma Bronze em Silver (limpeza e enriquecimento)
-  - `analytics_views`: cria/atualiza views analíticas em Analytics
-
-## Estrutura de Dados
-
-### Clientes (clientes)
-- id_cliente, nome, email, telefone, endereco, cidade, estado, pais
-- data_cadastro, segmento_cliente
-
-### Produtos (produtos)
-- id_produto, nome, categoria, subcategoria, preco, custo
-- quantidade_estoque, fornecedor, criado_em, margem_lucro
-
-### Transações (transacoes)
-- id_transacao, id_cliente, id_produto, quantidade, preco_unitario, valor_total
-- data_transacao, status, metodo_pagamento
-
-## Deploy
-
-1. Criar secrets no GitHub:
-   - `GCP_PROJECT_ID`
-   - `GCP_REGION`
-   - `GCP_LOCATION` (por exemplo `US`)
-   - `GCP_SA_KEY` (JSON da service account base64 ou diretamente como JSON)
-
-2. Executar o workflow GitHub Actions:
-   - `pipeline.yml` para aplicar infra e deploy das funções
-
-## Geração de Dados de Teste
-
-Para gerar dados mockados para teste:
-
-```bash
-cd scripts
-pip install -r requirements.txt
-python generate_mock_data.py
+```
+                    ┌─────────────────────────────────────────────────────┐
+                    │               Google Cloud Platform                 │
+                    │                                                     │
+  Upload JSON  ───► │  GCS Bucket (raw)                                   │
+                    │       │                                             │
+                    │       │ trigger (object.finalize)                   │
+                    │       ▼                                             │
+                    │  Cloud Function: bronze_ingest                      │
+                    │       │  · valida estrutura do JSON                 │
+                    │       │  · insere no BigQuery Bronze                │
+                    │       │  · publica no Pub/Sub                       │
+                    │       ▼                                             │
+                    │  Pub/Sub: bronze-to-silver                          │
+                    │       │                                             │
+                    │       │ trigger (message)                           │
+                    │       ▼                                             │
+                    │  Cloud Function: silver_transform                   │
+                    │       │  · deduplica (QUALIFY ROW_NUMBER)           │
+                    │       │  · normaliza strings (TRIM/UPPER/LOWER)     │
+                    │       │  · calcula margem_lucro                     │
+                    │       │  · valida status e consistência financeira  │
+                    │       │  · insere no BigQuery Silver                │
+                    │       │  · publica no Pub/Sub                       │
+                    │       ▼                                             │
+                    │  Pub/Sub: silver-to-analytics                       │
+                    │       │                                             │
+                    │       │ trigger (message)                           │
+                    │       ▼                                             │
+                    │  Cloud Function: analytics_views                    │
+                    │       │  · cria/atualiza 6 views analíticas         │
+                    │       ▼                                             │
+                    │  BigQuery Analytics (views)                         │
+                    └─────────────────────────────────────────────────────┘
 ```
 
-Isso criará um arquivo `ecommerce-data-YYYYMMDD-HHMMSS.json` com:
-- 100 clientes
-- 50 produtos
-- 500 transações
+### Camadas de dados
 
-Ou use o arquivo de exemplo `sample_data/ecommerce-sample.json` para testes rápidos.
+| Camada | Dataset BQ | Descrição |
+|---|---|---|
+| Bronze | `bronze` | Ingestão bruta append-only, timestamp de carga |
+| Silver | `silver` | Dados limpos, deduplicados, enriquecidos (`margem_lucro`) |
+| Analytics | `analytics` | Views agregadas para consumo analítico |
 
-## Uso
+## Stack
 
-1. Gere dados de teste ou crie seu próprio arquivo JSON seguindo o formato:
-   ```json
-   {
-     "clientes": [...],
-     "produtos": [...],
-     "transacoes": [...],
-     "generated_at": "...",
-     "version": "1.0"
-   }
-   ```
+- **Infraestrutura**: Terraform 1.6+, GCS backend para estado remoto
+- **Processamento**: Python 3.11, Cloud Functions Gen 1
+- **Armazenamento**: Google Cloud Storage, BigQuery
+- **Orquestração**: Pub/Sub (event-driven, sem orquestrador centralizado)
+- **CI/CD**: GitHub Actions (fmt → validate → apply → deploy)
+- **Segurança**: Service Accounts com least-privilege, Workload Identity-ready
 
-2. Faça upload do arquivo JSON no bucket:
-   - `gs://<project_id>-pipeline-raw`
+## Regras de data quality (Silver)
 
-3. A função `bronze_ingest` será acionada automaticamente.
-4. O processo prossegue para Silver e Analytics via Pub/Sub.
+- **Deduplicação**: `QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY carregado_em DESC) = 1`
+- **Normalização**: `TRIM()` em strings, `UPPER()` em `estado`, `LOWER()` em `email`
+- **Filtros de integridade**: registros nulos em campos obrigatórios são descartados
+- **Validação de status**: apenas `completed`, `pending` e `cancelled` são aceitos
+- **Consistência financeira**: `|quantidade × preco_unitario - valor_total| ≤ 0.01`
+- **Enriquecimento**: `margem_lucro = (preco - custo) / preco`
 
-## Views Analíticas Disponíveis
+## Views analíticas
 
-- `resumo_clientes`: Resumo por cliente com métricas de compra
-- `performance_produtos`: Performance de produtos
-- `vendas_por_categoria`: Vendas por categoria
-- `vendas_diarias`: Vendas diárias
-- `valor_vida_cliente`: Valor do tempo de vida do cliente
-- `status_inventario`: Status do inventário
+| View | Descrição |
+|---|---|
+| `resumo_clientes` | Métricas por cliente: total gasto, número de pedidos, datas |
+| `performance_produtos` | Receita, quantidade vendida e preço médio por produto |
+| `vendas_por_categoria` | Receita e volume agregados por categoria/subcategoria |
+| `vendas_diarias` | Série temporal de vendas com clientes únicos por dia |
+| `valor_vida_cliente` | CLV com segmentação (Alto / Médio / Baixo Valor) |
+| `status_inventario` | Estoque atual com alertas (Esgotado / Estoque Baixo) |
 
-## Observação
+## Estrutura do Repositório
 
-Projetado para utilizar apenas serviços com camada gratuita do GCP: Cloud Storage, BigQuery, Pub/Sub e Cloud Functions.
+```
+gcp-pipeline/
+├── .github/
+│   └── workflows/
+│       └── pipeline.yml         # CI/CD: Terraform + deploy
+├── functions/
+│   ├── bronze_ingest/
+│   │   ├── main.py              # GCS trigger → BigQuery Bronze
+│   │   └── requirements.txt
+│   ├── silver_transform/
+│   │   ├── main.py              # Pub/Sub trigger → transformações Silver
+│   │   └── requirements.txt
+│   └── analytics_views/
+│       ├── main.py              # Pub/Sub trigger → views Analytics
+│       └── requirements.txt
+├── terraform/
+│   ├── main.tf                  # Todos os recursos GCP
+│   ├── variables.tf
+│   ├── versions.tf              # Backend GCS + versões dos providers
+│   └── schemas/                 # Schemas JSON das tabelas BigQuery
+│       ├── bronze_clientes.json
+│       ├── bronze_produtos.json
+│       ├── bronze_transacoes.json
+│       ├── silver_clientes.json
+│       ├── silver_produtos.json
+│       └── silver_transacoes.json
+├── scripts/
+│   ├── generate_mock_data.py    # Gerador de dados mockados com Faker
+│   └── requirements.txt
+└── sample_data/
+    └── ecommerce-sample.json    # Dados de exemplo para testes rápidos
+```
+
+## Observações
+
+- Projetado para utilizar apenas serviços dentro da camada gratuita do GCP.
+- Cloud Functions Gen 1 (flag `--no-gen2`) para compatibilidade com o SDK atual.
+- O estado do Terraform é armazenado no mesmo bucket GCS usado para ingestão de dados.

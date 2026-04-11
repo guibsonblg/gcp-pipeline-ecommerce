@@ -90,7 +90,7 @@ def generate_transactions(customers, products, num_transactions=500):
         product = random.choice(products)
 
         quantity = random.randint(1, 5)
-        unit_price = product['price'] * random.uniform(0.8, 1.2)  # Variação de preço
+        unit_price = product['preco'] * random.uniform(0.8, 1.2)  # Variação de preço
         total_amount = round(unit_price * quantity, 2)
 
         # Transações mais recentes têm maior probabilidade
