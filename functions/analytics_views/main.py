@@ -22,7 +22,7 @@ VIEWS = {
             c.segmento_cliente,
             c.data_cadastro,
             COUNT(t.id_transacao) as total_transacoes,
-            SUM(t.valor_total) as valor_total_gasto,
+            COALESCE(SUM(t.valor_total), 0) as valor_total_gasto,
             AVG(t.valor_total) as valor_medio_transacao,
             MAX(t.data_transacao) as ultima_transacao,
             MIN(t.data_transacao) as primeira_transacao
@@ -44,8 +44,8 @@ VIEWS = {
             p.quantidade_estoque,
             p.fornecedor,
             COUNT(t.id_transacao) as total_vendas,
-            SUM(t.quantidade) as quantidade_vendida,
-            SUM(t.valor_total) as receita_total,
+            COALESCE(SUM(t.quantidade), 0) as quantidade_vendida,
+            COALESCE(SUM(t.valor_total), 0) as receita_total,
             AVG(t.preco_unitario) as preco_medio_vendido,
             MAX(t.data_transacao) as ultima_venda
         FROM `{project_id}.{silver_dataset}.produtos` p
@@ -88,7 +88,7 @@ VIEWS = {
             c.segmento_cliente,
             c.data_cadastro,
             COUNT(t.id_transacao) as numero_transacoes,
-            SUM(t.valor_total) as valor_vida,
+            COALESCE(SUM(t.valor_total), 0) as valor_vida,
             AVG(t.valor_total) as valor_medio_pedido,
             MAX(t.data_transacao) as ultima_compra,
             DATE_DIFF(CURRENT_DATE(), DATE(c.data_cadastro), DAY) as dias_desde_cadastro,
@@ -118,7 +118,7 @@ VIEWS = {
                 WHEN p.quantidade_estoque <= 50 THEN 'Estoque Médio'
                 ELSE 'Bem Estoqueado'
             END as status_estoque,
-            SUM(t.quantidade) as vendido_ultimos_30_dias
+            COALESCE(SUM(t.quantidade), 0) as vendido_ultimos_30_dias
         FROM `{project_id}.{silver_dataset}.produtos` p
         LEFT JOIN `{project_id}.{silver_dataset}.transacoes` t
             ON p.id_produto = t.id_produto

@@ -71,7 +71,7 @@ jobs:
 
       - name: Resolver service account das funções
         run: |
-          FUNCTION_SA_EMAIL=$(gcloud iam service-accounts list --filter="pipeline-functions-sa" --format="value(email)")
+          FUNCTION_SA_EMAIL=$(gcloud iam service-accounts list --filter="email:pipeline-functions-sa@${{ secrets.GCP_PROJECT_ID }}" --format="value(email)")
           echo "FUNCTION_SA_EMAIL=${FUNCTION_SA_EMAIL}" >> $GITHUB_ENV
 
       - name: Deploy função bronze_ingest
