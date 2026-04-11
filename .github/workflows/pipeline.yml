@@ -40,6 +40,10 @@ jobs:
         working-directory: terraform
         run: terraform fmt -check
 
+      - name: Validar Terraform
+        working-directory: terraform
+        run: terraform validate
+
       - name: Aplicar Terraform
         working-directory: terraform
         run: terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}" -var="region=${{ secrets.GCP_REGION }}" -var="location=${{ secrets.GCP_LOCATION }}"

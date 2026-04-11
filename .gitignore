@@ -49,3 +49,6 @@ sample_data/*.json
 
 # Logs
 *.log
+
+# Notas locais (não versionar)
+notas-locais/
