@@ -68,7 +68,6 @@ VIEWS = {
             ON t.id_produto = p.id_produto
         WHERE t.status = 'completed'
         GROUP BY p.categoria, p.subcategoria
-        ORDER BY receita_total DESC
     """,
     "vendas_diarias": f"""
         SELECT
@@ -81,7 +80,6 @@ VIEWS = {
         FROM `{project_id}.{silver_dataset}.transacoes` t
         WHERE t.status = 'completed'
         GROUP BY DATE(t.data_transacao)
-        ORDER BY data_venda DESC
     """,
     "valor_vida_cliente": f"""
         SELECT
@@ -127,7 +125,6 @@ VIEWS = {
             AND t.status = 'completed'
             AND DATE(t.data_transacao) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
         GROUP BY p.id_produto, p.nome, p.categoria, p.quantidade_estoque, p.fornecedor
-        ORDER BY p.quantidade_estoque ASC
     """
 }
 
@@ -138,8 +135,7 @@ def create_analytics_views(event, context):
     if event.get("data"):
         payload = json.loads(base64.b64decode(event["data"]).decode("utf-8"))
 
-    for view_id, query_template in VIEWS.items():
-        query = query_template.format(project_id=project_id, silver_dataset=silver_dataset)
+    for view_id, query in VIEWS.items():
         view_ref = bigquery.Table(f"{project_id}.{analytics_dataset}.{view_id}")
         view_ref.view_query = query
 
