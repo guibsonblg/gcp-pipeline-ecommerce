@@ -81,7 +81,7 @@ def generate_products(num_products=50):
 def generate_transactions(customers, products, num_transactions=500):
     """Gera transações de vendas."""
     transactions = []
-    statuses = ['completed', 'pending', 'cancelled', 'refunded']
+    statuses = ['completed', 'pending', 'cancelled']
     payment_methods = ['credit_card', 'debit_card', 'pix', 'boleto', 'paypal']
 
     for i in range(num_transactions):
@@ -90,7 +90,9 @@ def generate_transactions(customers, products, num_transactions=500):
         product = random.choice(products)
 
         quantity = random.randint(1, 5)
-        unit_price = product['preco'] * random.uniform(0.8, 1.2)  # Variação de preço
+        # Arredondar unit_price antes de calcular o total para garantir consistência
+        # com a validação ABS(quantidade * preco_unitario - valor_total) <= 0.01 na Silver
+        unit_price = round(product['preco'] * random.uniform(0.8, 1.2), 2)
         total_amount = round(unit_price * quantity, 2)
 
         # Transações mais recentes têm maior probabilidade
@@ -105,10 +107,10 @@ def generate_transactions(customers, products, num_transactions=500):
             'id_cliente': customer['id_cliente'],
             'id_produto': product['id_produto'],
             'quantidade': quantity,
-            'preco_unitario': round(unit_price, 2),
+            'preco_unitario': unit_price,
             'valor_total': total_amount,
             'data_transacao': transaction_date.isoformat(),
-            'status': random.choices(statuses, weights=[0.7, 0.15, 0.1, 0.05])[0],
+            'status': random.choices(statuses, weights=[0.75, 0.15, 0.10])[0],
             'metodo_pagamento': random.choice(payment_methods)
         }
         transactions.append(transaction)
